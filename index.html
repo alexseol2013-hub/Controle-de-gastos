@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Livro-Caixa — Controle Financeiro</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="ledger">
+
+  <header class="ledger__header">
+    <div class="ledger__title">
+      <span class="ledger__eyebrow">Livro-Caixa</span>
+      <h1>Controle financeiro</h1>
+    </div>
+    <div class="ledger__actions">
+      <button class="btn btn--ghost" id="btnExport" title="Baixar uma cópia dos seus dados">Exportar backup</button>
+      <label class="btn btn--ghost" for="fileImport" title="Carregar um backup salvo anteriormente">Importar backup</label>
+      <input type="file" id="fileImport" accept="application/json" hidden>
+      <button class="btn btn--primary" id="btnAddMonth">+ Novo mês</button>
+    </div>
+  </header>
+
+  <nav class="months" id="monthsNav" aria-label="Meses"></nav>
+
+  <main class="board">
+
+    <section class="sheet" aria-label="Planilha de contas">
+      <div class="sheet__scroll">
+        <table id="sheetTable">
+          <thead id="sheetHead"></thead>
+          <tbody id="sheetBody"></tbody>
+          <tfoot id="sheetFoot"></tfoot>
+        </table>
+      </div>
+    </section>
+
+    <aside class="summary" aria-label="Resumo">
+      <div class="summary__card summary__card--balance">
+        <span class="summary__label">Saldo do mês</span>
+        <span class="summary__value" id="sumBalance">R$ 0</span>
+        <span class="summary__hint" id="sumBalanceHint"></span>
+      </div>
+      <div class="summary__row">
+        <div class="summary__card">
+          <span class="summary__label">Rendimentos</span>
+          <span class="summary__value summary__value--small" id="sumIncome">R$ 0</span>
+        </div>
+        <div class="summary__card">
+          <span class="summary__label">Despesas</span>
+          <span class="summary__value summary__value--small" id="sumExpense">R$ 0</span>
+        </div>
+      </div>
+      <div class="summary__card">
+        <span class="summary__label">Saldo acumulado</span>
+        <span class="summary__value summary__value--small" id="sumCumulative">R$ 0</span>
+      </div>
+    </aside>
+
+  </main>
+
+  <section class="charts">
+    <div class="chart-card">
+      <h2>Saldo por mês</h2>
+      <canvas id="chartBalance" height="220"></canvas>
+    </div>
+    <div class="chart-card">
+      <h2>Rendimentos × Despesas</h2>
+      <canvas id="chartIncomeExpense" height="220"></canvas>
+    </div>
+  </section>
+
+  <footer class="ledger__footer">
+    <p>Os dados ficam salvos neste navegador (localStorage). Use "Exportar backup" de vez em quando para não os perder.</p>
+  </footer>
+
+</div>
+
+<template id="rowTemplate">
+  <tr>
+    <th class="cell cell--label" data-role="label"></th>
+  </tr>
+</template>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
