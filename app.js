@@ -4,12 +4,14 @@
 --------------------------------------------------------- */
 
 const STORAGE_KEY = 'livroCaixa_v1';
+const VIEW_KEY = 'livroCaixa_view';
 
 const GROUP_META = {
   income:   { label: 'Rendimentos',        totalLabel: 'Total de rendimentos' },
   fixed:    { label: 'Despesas Fixas',      totalLabel: 'Total de despesas fixas' },
   variable: { label: 'Despesas Variáveis',  totalLabel: 'Total de despesas variáveis' },
 };
+const GROUP_ORDER = ['income', 'fixed', 'variable'];
 
 function uid(prefix) {
   return prefix + '_' + Math.random().toString(36).slice(2, 9);
@@ -78,6 +80,8 @@ function saveState() {
 
 let state = loadState();
 let activeMonthId = state.months[state.months.length - 1]?.id;
+let viewMode = localStorage.getItem(VIEW_KEY) || 'month';
+let collapsedGroups = {}; // session-only, per groupKey
 
 const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
 const brlPrecise = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -101,23 +105,190 @@ function cumulativeSaldo(monthId) {
   return total;
 }
 
-/* ---------------- render: months nav ---------------- */
+function monthIndex(monthId) {
+  return state.months.findIndex(m => m.id === monthId);
+}
 
-function renderMonthsNav() {
-  const nav = document.getElementById('monthsNav');
-  nav.innerHTML = '';
+/* =========================================================
+   VIEW TOGGLE
+========================================================= */
+
+function setViewMode(mode) {
+  viewMode = mode;
+  localStorage.setItem(VIEW_KEY, mode);
+  document.querySelectorAll('.viewToggle__btn').forEach(b => b.classList.toggle('is-active', b.dataset.mode === mode));
+  document.getElementById('monthView').hidden = mode !== 'month';
+  document.getElementById('tableView').hidden = mode !== 'table';
+  closeMonthMenu();
+}
+
+document.querySelectorAll('.viewToggle__btn').forEach(btn => {
+  btn.addEventListener('click', () => setViewMode(btn.dataset.mode));
+});
+
+/* =========================================================
+   MONTH VIEW (card list, one month at a time)
+========================================================= */
+
+function renderHero() {
+  const idx = monthIndex(activeMonthId);
+  const m = state.months[idx];
+  if (!m) return;
+
+  document.getElementById('monthPickerLabel').textContent = m.label;
+  document.getElementById('prevMonth').disabled = idx <= 0;
+  document.getElementById('nextMonth').disabled = idx >= state.months.length - 1;
+
+  const income = groupTotal('income', m.id);
+  const expense = groupTotal('fixed', m.id) + groupTotal('variable', m.id);
+  const saldo = income - expense;
+  const cumulative = cumulativeSaldo(m.id);
+
+  const balEl = document.getElementById('heroBalance');
+  balEl.textContent = brlPrecise.format(saldo);
+  balEl.classList.toggle('neg', saldo < 0);
+  balEl.classList.toggle('pos', saldo >= 0);
+
+  document.getElementById('heroIncome').textContent = brl.format(income);
+  document.getElementById('heroExpense').textContent = brl.format(expense);
+  const cumEl = document.getElementById('heroCumulative');
+  cumEl.textContent = brl.format(cumulative);
+  cumEl.style.color = cumulative >= 0 ? '#B7E0C4' : '#F0B3A6';
+}
+
+function closeMonthMenu() {
+  const menu = document.getElementById('monthMenu');
+  menu.hidden = true;
+  menu.innerHTML = '';
+}
+
+function toggleMonthMenu() {
+  const menu = document.getElementById('monthMenu');
+  if (!menu.hidden) { closeMonthMenu(); return; }
+  menu.innerHTML = '';
   state.months.forEach(m => {
-    const btn = document.createElement('button');
-    btn.className = 'month-tab' + (m.id === activeMonthId ? ' is-active' : '');
-    btn.textContent = m.label;
-    btn.addEventListener('click', () => { activeMonthId = m.id; renderMonthsNav(); renderSummary(); });
-    nav.appendChild(btn);
+    const item = document.createElement('button');
+    item.className = 'monthMenu__item' + (m.id === activeMonthId ? ' is-active' : '');
+    const span = document.createElement('span');
+    span.textContent = m.label;
+    item.appendChild(span);
+    if (state.months.length > 1) {
+      const del = document.createElement('button');
+      del.textContent = '✕';
+      del.title = 'Remover este mês';
+      del.addEventListener('click', (e) => { e.stopPropagation(); removeMonth(m.id); });
+      item.appendChild(del);
+    }
+    item.addEventListener('click', () => { activeMonthId = m.id; closeMonthMenu(); renderHero(); renderGroups(); });
+    menu.appendChild(item);
+  });
+  menu.hidden = false;
+}
+
+document.getElementById('monthPicker').addEventListener('click', toggleMonthMenu);
+document.addEventListener('click', (e) => {
+  const menu = document.getElementById('monthMenu');
+  if (!menu.hidden && !menu.contains(e.target) && !e.target.closest('#monthPicker')) {
+    closeMonthMenu();
+  }
+});
+document.getElementById('prevMonth').addEventListener('click', () => {
+  const idx = monthIndex(activeMonthId);
+  if (idx > 0) { activeMonthId = state.months[idx - 1].id; renderHero(); renderGroups(); }
+});
+document.getElementById('nextMonth').addEventListener('click', () => {
+  const idx = monthIndex(activeMonthId);
+  if (idx < state.months.length - 1) { activeMonthId = state.months[idx + 1].id; renderHero(); renderGroups(); }
+});
+
+function renderGroups() {
+  const container = document.getElementById('groupsContainer');
+  container.innerHTML = '';
+
+  GROUP_ORDER.forEach(groupKey => {
+    const meta = GROUP_META[groupKey];
+    const card = document.createElement('div');
+    card.className = 'groupCard' + (collapsedGroups[groupKey] ? ' is-collapsed' : '');
+
+    const head = document.createElement('div');
+    head.className = 'groupCard__head';
+    const h3 = document.createElement('h3');
+    h3.textContent = meta.label;
+    const totalWrap = document.createElement('div');
+    totalWrap.style.display = 'flex';
+    totalWrap.style.alignItems = 'center';
+    const totalSpan = document.createElement('span');
+    totalSpan.className = 'groupCard__total';
+    totalSpan.textContent = (groupKey === 'income' ? '' : '− ') + brl.format(groupTotal(groupKey, activeMonthId));
+    const chev = document.createElement('span');
+    chev.className = 'groupCard__chev';
+    chev.textContent = '▾';
+    totalWrap.appendChild(totalSpan);
+    totalWrap.appendChild(chev);
+    head.appendChild(h3);
+    head.appendChild(totalWrap);
+    head.addEventListener('click', () => {
+      collapsedGroups[groupKey] = !collapsedGroups[groupKey];
+      card.classList.toggle('is-collapsed');
+    });
+    card.appendChild(head);
+
+    const body = document.createElement('div');
+    body.className = 'groupCard__body';
+
+    state.groups[groupKey].forEach(row => {
+      const itemRow = document.createElement('div');
+      itemRow.className = 'itemRow';
+
+      const nameInput = document.createElement('input');
+      nameInput.className = 'itemRow__name';
+      nameInput.value = row.name;
+      nameInput.addEventListener('change', () => { row.name = nameInput.value || row.name; saveState(); });
+
+      const valueInput = document.createElement('input');
+      valueInput.className = 'itemRow__value';
+      valueInput.type = 'text';
+      valueInput.inputMode = 'decimal';
+      const v = row.values[activeMonthId];
+      valueInput.value = v === null || v === undefined ? '' : String(v);
+      valueInput.placeholder = 'R$ 0';
+      valueInput.addEventListener('change', () => {
+        const parsed = parseFloat(valueInput.value.replace(',', '.'));
+        row.values[activeMonthId] = isNaN(parsed) ? null : parsed;
+        saveState();
+        renderHero();
+        totalSpan.textContent = (groupKey === 'income' ? '' : '− ') + brl.format(groupTotal(groupKey, activeMonthId));
+        renderCharts();
+      });
+
+      const del = document.createElement('button');
+      del.className = 'itemRow__del';
+      del.textContent = '✕';
+      del.title = 'Remover item';
+      del.addEventListener('click', () => removeRow(groupKey, row.id));
+
+      itemRow.appendChild(nameInput);
+      itemRow.appendChild(valueInput);
+      itemRow.appendChild(del);
+      body.appendChild(itemRow);
+    });
+
+    const addBtn = document.createElement('button');
+    addBtn.className = 'addItemBtn';
+    addBtn.textContent = '+ adicionar item';
+    addBtn.addEventListener('click', () => addRowToGroup(groupKey));
+    body.appendChild(addBtn);
+
+    card.appendChild(body);
+    container.appendChild(card);
   });
 }
 
-/* ---------------- render: sheet table ---------------- */
+/* =========================================================
+   TABLE VIEW (Visão geral — planilha completa)
+========================================================= */
 
-function renderHead() {
+function renderTableHead() {
   const thead = document.getElementById('sheetHead');
   const tr = document.createElement('tr');
   tr.appendChild(document.createElement('th'));
@@ -127,7 +298,7 @@ function renderHead() {
     wrap.className = 'month-head';
     const input = document.createElement('input');
     input.value = m.label;
-    input.addEventListener('change', () => { m.label = input.value || m.label; saveState(); renderMonthsNav(); });
+    input.addEventListener('change', () => { m.label = input.value || m.label; saveState(); renderHero(); });
     wrap.appendChild(input);
     if (state.months.length > 1) {
       const del = document.createElement('button');
@@ -174,15 +345,15 @@ function makeValueCell(row, monthId) {
     const parsed = parseFloat(input.value.replace(',', '.'));
     row.values[monthId] = isNaN(parsed) ? null : parsed;
     saveState();
-    renderFoot();
-    renderSummary();
+    renderTableFoot();
+    renderHero();
     renderCharts();
   });
   td.appendChild(input);
   return td;
 }
 
-function renderGroupRows(groupKey, tbody) {
+function renderTableGroupRows(groupKey, tbody) {
   const meta = GROUP_META[groupKey];
 
   const headerRow = document.createElement('tr');
@@ -227,20 +398,17 @@ function renderGroupRows(groupKey, tbody) {
   tbody.appendChild(totalRow);
 }
 
-function renderBody() {
+function renderTableBody() {
   const tbody = document.getElementById('sheetBody');
   tbody.innerHTML = '';
-  renderGroupRows('income', tbody);
-  renderGroupRows('fixed', tbody);
-  renderGroupRows('variable', tbody);
+  GROUP_ORDER.forEach(groupKey => renderTableGroupRows(groupKey, tbody));
 }
 
-function renderFoot() {
+function renderTableFoot() {
   const tfoot = document.getElementById('sheetFoot');
   tfoot.innerHTML = '';
 
-  // update the three group total rows in body too (in case values changed without full body re-render)
-  ['income', 'fixed', 'variable'].forEach(groupKey => {
+  GROUP_ORDER.forEach(groupKey => {
     const row = document.querySelector(`tr.group-total[data-group-total="${groupKey}"]`);
     if (!row) return;
     state.months.forEach(m => {
@@ -278,32 +446,15 @@ function renderFoot() {
   tfoot.appendChild(cumRow);
 }
 
-/* ---------------- render: summary sidebar ---------------- */
-
-function renderSummary() {
-  const m = state.months.find(x => x.id === activeMonthId) || state.months[state.months.length - 1];
-  if (!m) return;
-  const income = groupTotal('income', m.id);
-  const expense = groupTotal('fixed', m.id) + groupTotal('variable', m.id);
-  const saldo = income - expense;
-  const cumulative = cumulativeSaldo(m.id);
-
-  document.getElementById('sumBalanceHint').textContent = m.label;
-
-  const balEl = document.getElementById('sumBalance');
-  balEl.textContent = brlPrecise.format(saldo);
-  balEl.classList.toggle('pos', saldo >= 0);
-  balEl.classList.toggle('neg', saldo < 0);
-
-  document.getElementById('sumIncome').textContent = brlPrecise.format(income);
-  document.getElementById('sumExpense').textContent = brlPrecise.format(expense);
-
-  const cumEl = document.getElementById('sumCumulative');
-  cumEl.textContent = brlPrecise.format(cumulative);
-  cumEl.style.color = cumulative >= 0 ? 'var(--positive)' : 'var(--negative)';
+function renderTable() {
+  renderTableHead();
+  renderTableBody();
+  renderTableFoot();
 }
 
-/* ---------------- charts ---------------- */
+/* =========================================================
+   CHARTS
+========================================================= */
 
 let balanceChart, incomeExpenseChart;
 
@@ -318,8 +469,8 @@ function renderCharts() {
   if (!balanceChart) {
     balanceChart = new Chart(balanceCtx, {
       type: 'bar',
-      data: { labels, datasets: [{ label: 'Saldo', data: saldos, backgroundColor: colors, borderRadius: 2, maxBarThickness: 42 }] },
-      options: baseChartOptions('Saldo (R$)'),
+      data: { labels, datasets: [{ label: 'Saldo', data: saldos, backgroundColor: colors, borderRadius: 4, maxBarThickness: 36 }] },
+      options: baseChartOptions(),
     });
   } else {
     balanceChart.data.labels = labels;
@@ -335,11 +486,11 @@ function renderCharts() {
       data: {
         labels,
         datasets: [
-          { label: 'Rendimentos', data: incomes, backgroundColor: '#A9803F', borderRadius: 2, maxBarThickness: 24 },
-          { label: 'Despesas', data: expenses, backgroundColor: '#9C3B2D', borderRadius: 2, maxBarThickness: 24 },
+          { label: 'Rendimentos', data: incomes, backgroundColor: '#A9803F', borderRadius: 4, maxBarThickness: 20 },
+          { label: 'Despesas', data: expenses, backgroundColor: '#9C3B2D', borderRadius: 4, maxBarThickness: 20 },
         ],
       },
-      options: baseChartOptions('R$', true),
+      options: baseChartOptions(true),
     });
   } else {
     incomeExpenseChart.data.labels = labels;
@@ -349,49 +500,44 @@ function renderCharts() {
   }
 }
 
-function baseChartOptions(axisLabel, showLegend) {
+function baseChartOptions(showLegend) {
   return {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
-      legend: { display: !!showLegend, labels: { font: { family: 'Inter', size: 11 }, color: '#5C6355' } },
-      tooltip: {
-        callbacks: {
-          label: (ctx) => `${ctx.dataset.label}: ${brlPrecise.format(ctx.raw)}`,
-        },
-      },
+      legend: { display: !!showLegend, labels: { font: { family: 'Inter', size: 11 }, color: '#6B7263' } },
+      tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${brlPrecise.format(ctx.raw)}` } },
     },
     scales: {
-      x: { grid: { display: false }, ticks: { font: { family: 'IBM Plex Mono', size: 11 }, color: '#5C6355' } },
+      x: { grid: { display: false }, ticks: { font: { family: 'Inter', size: 10.5 }, color: '#6B7263' } },
       y: {
-        grid: { color: '#DDD0A8' },
-        ticks: {
-          font: { family: 'IBM Plex Mono', size: 10 }, color: '#5C6355',
-          callback: (v) => brl.format(v),
-        },
+        grid: { color: '#E4D9B8' },
+        ticks: { font: { family: 'Inter', size: 10 }, color: '#6B7263', callback: (v) => brl.format(v) },
       },
     },
   };
 }
 
-/* ---------------- mutations ---------------- */
+/* =========================================================
+   MUTATIONS
+========================================================= */
 
 function addRowToGroup(groupKey) {
   const values = {};
   state.months.forEach(m => { values[m.id] = null; });
   state.groups[groupKey].push({ id: uid('r'), name: 'Novo item', values });
   saveState();
-  renderBody();
-  renderFoot();
+  renderGroups();
+  renderTable();
   renderCharts();
 }
 
 function removeRow(groupKey, rowId) {
   state.groups[groupKey] = state.groups[groupKey].filter(r => r.id !== rowId);
   saveState();
-  renderBody();
-  renderFoot();
-  renderSummary();
+  renderGroups();
+  renderTable();
+  renderHero();
   renderCharts();
 }
 
@@ -399,7 +545,7 @@ function addMonth() {
   const prev = state.months[state.months.length - 1];
   const newMonth = { id: uid('m'), label: 'Novo mês' };
   state.months.push(newMonth);
-  ['income', 'fixed', 'variable'].forEach(groupKey => {
+  GROUP_ORDER.forEach(groupKey => {
     state.groups[groupKey].forEach(row => {
       // Despesas fixas costumam se repetir; demais começam em branco.
       row.values[newMonth.id] = groupKey === 'fixed' && prev ? (row.values[prev.id] ?? null) : null;
@@ -416,10 +562,13 @@ function removeMonth(monthId) {
   state.months = state.months.filter(m => m.id !== monthId);
   if (activeMonthId === monthId) activeMonthId = state.months[state.months.length - 1].id;
   saveState();
+  closeMonthMenu();
   renderAll();
 }
 
-/* ---------------- backup ---------------- */
+/* =========================================================
+   BACKUP
+========================================================= */
 
 function exportBackup() {
   const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
@@ -448,14 +597,14 @@ function importBackup(file) {
   reader.readAsText(file);
 }
 
-/* ---------------- init ---------------- */
+/* =========================================================
+   INIT
+========================================================= */
 
 function renderAll() {
-  renderMonthsNav();
-  renderHead();
-  renderBody();
-  renderFoot();
-  renderSummary();
+  renderHero();
+  renderGroups();
+  renderTable();
   renderCharts();
 }
 
@@ -466,4 +615,5 @@ document.getElementById('fileImport').addEventListener('change', (e) => {
   e.target.value = '';
 });
 
+setViewMode(viewMode);
 renderAll();
