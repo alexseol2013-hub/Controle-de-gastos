@@ -112,17 +112,19 @@ function groupTotal(groupKey, monthId) {
   return state.groups[groupKey].reduce((sum, r) => sum + num(r.values[monthId]), 0);
 }
 
-function monthSaldo(monthId) {
-  return groupTotal('income', monthId) - groupTotal('fixed', monthId) - groupTotal('variable', monthId);
+function findSobraRow() {
+  return state.groups.income.find(r => r.name.toLowerCase().includes('sobra'));
 }
 
-function cumulativeSaldo(monthId) {
-  let total = 0;
-  for (const m of state.months) {
-    total += monthSaldo(m.id);
-    if (m.id === monthId) break;
-  }
-  return total;
+// Renda do mês SEM contar a "sobra" (dinheiro que só rolou do mês
+// anterior) — ou seja, dinheiro genuinamente novo que entrou.
+function recurringIncomeTotal(monthId) {
+  const sobraRow = findSobraRow();
+  return state.groups.income.reduce((sum, r) => sum + (r === sobraRow ? 0 : num(r.values[monthId])), 0);
+}
+
+function monthSaldo(monthId) {
+  return groupTotal('income', monthId) - groupTotal('fixed', monthId) - groupTotal('variable', monthId);
 }
 
 function monthIndex(monthId) {
@@ -162,7 +164,7 @@ function renderHero() {
   const income = groupTotal('income', m.id);
   const expense = groupTotal('fixed', m.id) + groupTotal('variable', m.id);
   const saldo = income - expense;
-  const cumulative = cumulativeSaldo(m.id);
+  const netGenerated = recurringIncomeTotal(m.id) - expense;
 
   const balEl = document.getElementById('heroBalance');
   balEl.textContent = brlPrecise.format(saldo);
@@ -172,8 +174,8 @@ function renderHero() {
   document.getElementById('heroIncome').textContent = brl.format(income);
   document.getElementById('heroExpense').textContent = brl.format(expense);
   const cumEl = document.getElementById('heroCumulative');
-  cumEl.textContent = brl.format(cumulative);
-  cumEl.style.color = cumulative >= 0 ? '#B7E0C4' : '#F0B3A6';
+  cumEl.textContent = brl.format(netGenerated);
+  cumEl.style.color = netGenerated >= 0 ? '#B7E0C4' : '#F0B3A6';
 
   renderHeroDelta(idx, saldo);
 }
@@ -515,10 +517,10 @@ function renderTableFoot() {
   const cumRow = document.createElement('tr');
   cumRow.className = 'balance-row';
   const cTh = document.createElement('th');
-  cTh.textContent = 'Saldo acumulado';
+  cTh.textContent = 'Gerado no mês (sem sobra)';
   cumRow.appendChild(cTh);
   state.months.forEach(m => {
-    const s = cumulativeSaldo(m.id);
+    const s = recurringIncomeTotal(m.id) - groupTotal('fixed', m.id) - groupTotal('variable', m.id);
     const td = document.createElement('td');
     td.className = 'balance-cell ' + (s >= 0 ? 'pos' : 'neg');
     td.textContent = brl.format(s);
@@ -636,22 +638,27 @@ function renderPeriodSummary() {
   const el = document.getElementById('periodIncome');
   if (!el) return;
   const months = state.months;
-  const totalIncome = months.reduce((sum, m) => sum + groupTotal('income', m.id), 0);
+  if (!months.length) return;
+
+  // Rendimentos e despesas somados do período, sem contar a "sobra"
+  // (senão o mesmo dinheiro rolando de mês em mês seria somado várias vezes).
+  const totalIncome = months.reduce((sum, m) => sum + recurringIncomeTotal(m.id), 0);
   const totalExpense = months.reduce((sum, m) => sum + groupTotal('fixed', m.id) + groupTotal('variable', m.id), 0);
-  const totalBalance = totalIncome - totalExpense;
-  const avg = months.length ? totalBalance / months.length : 0;
+  const netGenerated = totalIncome - totalExpense;
+  const avg = netGenerated / months.length;
+  const currentBalance = monthSaldo(months[months.length - 1].id);
 
   document.getElementById('periodIncome').textContent = brl.format(totalIncome);
   document.getElementById('periodExpense').textContent = brl.format(totalExpense);
   const balEl = document.getElementById('periodBalance');
-  balEl.textContent = brl.format(totalBalance);
-  balEl.style.color = totalBalance >= 0 ? 'var(--positive)' : 'var(--negative)';
+  balEl.textContent = brl.format(currentBalance);
+  balEl.style.color = currentBalance >= 0 ? 'var(--positive)' : 'var(--negative)';
   const avgEl = document.getElementById('periodAverage');
   avgEl.textContent = brl.format(avg);
   avgEl.style.color = avg >= 0 ? 'var(--positive)' : 'var(--negative)';
 
   document.getElementById('periodHint').textContent =
-    `Considerando ${months.length} ${months.length === 1 ? 'mês lançado' : 'meses lançados'}, de ${months[0]?.label} a ${months[months.length - 1]?.label}.`;
+    `Considerando ${months.length} ${months.length === 1 ? 'mês lançado' : 'meses lançados'}, de ${months[0]?.label} a ${months[months.length - 1]?.label}. "Saldo atual" é o dinheiro real que sobra hoje; os outros valores não contam o que só rolou de um mês pro outro.`;
 }
 
 function renderDivergingChart(container, months, values) {
