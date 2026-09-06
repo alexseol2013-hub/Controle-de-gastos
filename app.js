@@ -13,6 +13,24 @@ const GROUP_META = {
 };
 const GROUP_ORDER = ['income', 'fixed', 'variable'];
 
+const CATEGORY_META = {
+  moradia:     { label: 'Moradia',            color: '#6B5B3D' },
+  transporte:  { label: 'Transporte',         color: '#3D6B85' },
+  alimentacao: { label: 'Alimentação',        color: '#2E6B4F' },
+  saude:       { label: 'Saúde',              color: '#A94B3D' },
+  educacao:    { label: 'Educação',           color: '#5B4C8C' },
+  cuidados:    { label: 'Cuidados pessoais',  color: '#A9803F' },
+  pets:        { label: 'Pets',               color: '#8C6F52' },
+  dividas:     { label: 'Dívidas / Cartão',   color: '#7A3D55' },
+  lazer:       { label: 'Lazer',              color: '#3D8C6B' },
+  outros:      { label: 'Outros',             color: '#9AA093' },
+};
+const CATEGORY_ORDER = Object.keys(CATEGORY_META);
+
+function rowCategory(row) {
+  return CATEGORY_META[row.category] ? row.category : 'outros';
+}
+
 function uid(prefix) {
   return prefix + '_' + Math.random().toString(36).slice(2, 9);
 }
@@ -21,10 +39,12 @@ function seedData() {
   const monthLabels = ['Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro', 'Janeiro', 'Fevereiro', 'Fevereiro (2)'];
   const months = monthLabels.map((label, i) => ({ id: 'm' + (i + 1), label }));
 
-  function row(name, vals) {
+  function row(name, vals, category) {
     const values = {};
     months.forEach((m, i) => { values[m.id] = vals[i] ?? null; });
-    return { id: uid('r'), name, values };
+    const r = { id: uid('r'), name, values };
+    if (category) r.category = category;
+    return r;
   }
 
   return {
@@ -39,28 +59,28 @@ function seedData() {
         row('Sobra do mês anterior', [3500, 3500, 5098, 3821, 4194, 15167, 13940, 13712]),
       ],
       fixed: [
-        row('Casa', [null, null, 1460, 1460, 1460, 1460, 1460, 1460]),
-        row('Gasolina', [null, 300, 350, 350, 350, 350, 350, 350]),
-        row('Luz', [null, null, 350, 350, 350, 350, 350, 350]),
-        row('Net', [null, null, 125, 125, 125, 125, 125, 125]),
-        row('Condomínio', [null, null, 320, 320, 320, 320, 320, 320]),
-        row('Barbeiro', [null, 45, 90, 90, 90, 90, 90, 90]),
-        row('Faculdade Alex', [null, null, 270, 270, 270, 270, 270, 270]),
-        row('Empréstimo', [null, null, 1497, 1497, 1497, 1497, 1497, 1497]),
-        row('Bomba', [null, null, 500, null, 500, null, null, null]),
-        row('Academia', [null, null, 250, 250, 250, 250, 250, 250]),
-        row('Gatos', [null, null, 300, 300, 300, 300, 300, 300]),
-        row('Remédios', [null, null, 200, 200, 200, 200, 200, 200]),
+        row('Casa', [null, null, 1460, 1460, 1460, 1460, 1460, 1460], 'moradia'),
+        row('Gasolina', [null, 300, 350, 350, 350, 350, 350, 350], 'transporte'),
+        row('Luz', [null, null, 350, 350, 350, 350, 350, 350], 'moradia'),
+        row('Net', [null, null, 125, 125, 125, 125, 125, 125], 'moradia'),
+        row('Condomínio', [null, null, 320, 320, 320, 320, 320, 320], 'moradia'),
+        row('Barbeiro', [null, 45, 90, 90, 90, 90, 90, 90], 'cuidados'),
+        row('Faculdade Alex', [null, null, 270, 270, 270, 270, 270, 270], 'educacao'),
+        row('Empréstimo', [null, null, 1497, 1497, 1497, 1497, 1497, 1497], 'dividas'),
+        row('Bomba', [null, null, 500, null, 500, null, null, null], 'transporte'),
+        row('Academia', [null, null, 250, 250, 250, 250, 250, 250], 'saude'),
+        row('Gatos', [null, null, 300, 300, 300, 300, 300, 300], 'pets'),
+        row('Remédios', [null, null, 200, 200, 200, 200, 200, 200], 'saude'),
       ],
       variable: [
-        row('Mercado', [null, 2500, 2500, 2500, 2500, 2500, 2500, 2500]),
-        row('Cartão de crédito ailos', [null, null, 1100, 800, 700, 700, 700, 700]),
-        row('Cartão de crédito mercado pago', [null, null, 2300, 1800, 1800, 1200, 1200, 1200]),
-        row('Dani', [null, 70, 70, 70, 70, 70, 70, 70]),
-        row('Rodrigo', [null, null, 25, 25, 25, 25, 25, 25]),
-        row('Unha / sobrancelha', [null, null, 250, 250, 250, 250, 250, 250]),
-        row('Empréstimo Pai', [null, null, 350, null, null, null, null, null]),
-        row('Cartão caixa', [null, null, 250, 250, 250, 250, 250, 250]),
+        row('Mercado', [null, 2500, 2500, 2500, 2500, 2500, 2500, 2500], 'alimentacao'),
+        row('Cartão de crédito ailos', [null, null, 1100, 800, 700, 700, 700, 700], 'dividas'),
+        row('Cartão de crédito mercado pago', [null, null, 2300, 1800, 1800, 1200, 1200, 1200], 'dividas'),
+        row('Dani', [null, 70, 70, 70, 70, 70, 70, 70], 'outros'),
+        row('Rodrigo', [null, null, 25, 25, 25, 25, 25, 25], 'outros'),
+        row('Unha / sobrancelha', [null, null, 250, 250, 250, 250, 250, 250], 'cuidados'),
+        row('Empréstimo Pai', [null, null, 350, null, null, null, null, null], 'dividas'),
+        row('Cartão caixa', [null, null, 250, 250, 250, 250, 250, 250], 'dividas'),
       ],
     },
   };
@@ -154,6 +174,26 @@ function renderHero() {
   const cumEl = document.getElementById('heroCumulative');
   cumEl.textContent = brl.format(cumulative);
   cumEl.style.color = cumulative >= 0 ? '#B7E0C4' : '#F0B3A6';
+
+  renderHeroDelta(idx, saldo);
+}
+
+function renderHeroDelta(idx, saldo) {
+  let el = document.getElementById('heroDelta');
+  if (!el) {
+    el = document.createElement('span');
+    el.id = 'heroDelta';
+    el.className = 'hero__delta';
+    document.querySelector('.hero__balance').appendChild(el);
+  }
+  if (idx <= 0) { el.textContent = ''; return; }
+  const prevMonth = state.months[idx - 1];
+  const prevSaldo = monthSaldo(prevMonth.id);
+  const diff = saldo - prevSaldo;
+  el.classList.toggle('pos', diff >= 0);
+  el.classList.toggle('neg', diff < 0);
+  const arrow = diff >= 0 ? '▲' : '▼';
+  el.textContent = `${arrow} ${brl.format(Math.abs(diff))} vs ${prevMonth.label}`;
 }
 
 function closeMonthMenu() {
@@ -179,7 +219,7 @@ function toggleMonthMenu() {
       del.addEventListener('click', (e) => { e.stopPropagation(); removeMonth(m.id); });
       item.appendChild(del);
     }
-    item.addEventListener('click', () => { activeMonthId = m.id; closeMonthMenu(); renderHero(); renderGroups(); });
+    item.addEventListener('click', () => { activeMonthId = m.id; closeMonthMenu(); renderHero(); renderGroups(); renderCategoryBreakdown(); });
     menu.appendChild(item);
   });
   menu.hidden = false;
@@ -194,11 +234,11 @@ document.addEventListener('click', (e) => {
 });
 document.getElementById('prevMonth').addEventListener('click', () => {
   const idx = monthIndex(activeMonthId);
-  if (idx > 0) { activeMonthId = state.months[idx - 1].id; renderHero(); renderGroups(); }
+  if (idx > 0) { activeMonthId = state.months[idx - 1].id; renderHero(); renderGroups(); renderCategoryBreakdown(); }
 });
 document.getElementById('nextMonth').addEventListener('click', () => {
   const idx = monthIndex(activeMonthId);
-  if (idx < state.months.length - 1) { activeMonthId = state.months[idx + 1].id; renderHero(); renderGroups(); }
+  if (idx < state.months.length - 1) { activeMonthId = state.months[idx + 1].id; renderHero(); renderGroups(); renderCategoryBreakdown(); }
 });
 
 function renderGroups() {
@@ -236,9 +276,48 @@ function renderGroups() {
     const body = document.createElement('div');
     body.className = 'groupCard__body';
 
-    state.groups[groupKey].forEach(row => {
+    state.groups[groupKey].forEach((row, idx, arr) => {
       const itemRow = document.createElement('div');
       itemRow.className = 'itemRow';
+
+      const reorder = document.createElement('div');
+      reorder.className = 'itemRow__reorder';
+      const upBtn = document.createElement('button');
+      upBtn.textContent = '▲';
+      upBtn.title = 'Mover para cima';
+      upBtn.disabled = idx === 0;
+      upBtn.addEventListener('click', () => moveItem(groupKey, row.id, -1));
+      const downBtn = document.createElement('button');
+      downBtn.textContent = '▼';
+      downBtn.title = 'Mover para baixo';
+      downBtn.disabled = idx === arr.length - 1;
+      downBtn.addEventListener('click', () => moveItem(groupKey, row.id, 1));
+      reorder.appendChild(upBtn);
+      reorder.appendChild(downBtn);
+      itemRow.appendChild(reorder);
+
+      if (groupKey !== 'income') {
+        const catKey = rowCategory(row);
+        const catSelect = document.createElement('select');
+        catSelect.className = 'itemRow__cat';
+        catSelect.style.background = CATEGORY_META[catKey].color;
+        catSelect.title = 'Categoria: ' + CATEGORY_META[catKey].label;
+        CATEGORY_ORDER.forEach(key => {
+          const opt = document.createElement('option');
+          opt.value = key;
+          opt.textContent = CATEGORY_META[key].label;
+          opt.selected = key === catKey;
+          catSelect.appendChild(opt);
+        });
+        catSelect.addEventListener('change', () => {
+          row.category = catSelect.value;
+          catSelect.style.background = CATEGORY_META[row.category].color;
+          catSelect.title = 'Categoria: ' + CATEGORY_META[row.category].label;
+          saveState();
+          renderCharts();
+        });
+        itemRow.appendChild(catSelect);
+      }
 
       const nameInput = document.createElement('input');
       nameInput.className = 'itemRow__name';
@@ -265,7 +344,9 @@ function renderGroups() {
       del.className = 'itemRow__del';
       del.textContent = '✕';
       del.title = 'Remover item';
-      del.addEventListener('click', () => removeRow(groupKey, row.id));
+      del.addEventListener('click', () => {
+        if (confirm(`Remover "${row.name}"?`)) removeRow(groupKey, row.id);
+      });
 
       itemRow.appendChild(nameInput);
       itemRow.appendChild(valueInput);
@@ -453,69 +534,213 @@ function renderTable() {
 }
 
 /* =========================================================
-   CHARTS
+   CHARTS — SVG desenhado à mão (sem depender de nenhuma
+   biblioteca externa, então nunca quebra por causa de rede)
 ========================================================= */
 
-let balanceChart, incomeExpenseChart;
+const SVG_NS = 'http://www.w3.org/2000/svg';
 
-function renderCharts() {
-  const labels = state.months.map(m => m.label);
-  const saldos = state.months.map(m => monthSaldo(m.id));
-  const incomes = state.months.map(m => groupTotal('income', m.id));
-  const expenses = state.months.map(m => groupTotal('fixed', m.id) + groupTotal('variable', m.id));
-  const colors = saldos.map(s => s >= 0 ? '#2E6B4F' : '#9C3B2D');
-
-  const balanceCtx = document.getElementById('chartBalance');
-  if (!balanceChart) {
-    balanceChart = new Chart(balanceCtx, {
-      type: 'bar',
-      data: { labels, datasets: [{ label: 'Saldo', data: saldos, backgroundColor: colors, borderRadius: 4, maxBarThickness: 36 }] },
-      options: baseChartOptions(),
-    });
-  } else {
-    balanceChart.data.labels = labels;
-    balanceChart.data.datasets[0].data = saldos;
-    balanceChart.data.datasets[0].backgroundColor = colors;
-    balanceChart.update();
-  }
-
-  const ieCtx = document.getElementById('chartIncomeExpense');
-  if (!incomeExpenseChart) {
-    incomeExpenseChart = new Chart(ieCtx, {
-      type: 'bar',
-      data: {
-        labels,
-        datasets: [
-          { label: 'Rendimentos', data: incomes, backgroundColor: '#A9803F', borderRadius: 4, maxBarThickness: 20 },
-          { label: 'Despesas', data: expenses, backgroundColor: '#9C3B2D', borderRadius: 4, maxBarThickness: 20 },
-        ],
-      },
-      options: baseChartOptions(true),
-    });
-  } else {
-    incomeExpenseChart.data.labels = labels;
-    incomeExpenseChart.data.datasets[0].data = incomes;
-    incomeExpenseChart.data.datasets[1].data = expenses;
-    incomeExpenseChart.update();
-  }
+function svgEl(tag, attrs) {
+  const el = document.createElementNS(SVG_NS, tag);
+  for (const k in attrs) el.setAttribute(k, attrs[k]);
+  return el;
 }
 
-function baseChartOptions(showLegend) {
-  return {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: { display: !!showLegend, labels: { font: { family: 'Inter', size: 11 }, color: '#6B7263' } },
-      tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${brlPrecise.format(ctx.raw)}` } },
-    },
-    scales: {
-      x: { grid: { display: false }, ticks: { font: { family: 'Inter', size: 10.5 }, color: '#6B7263' } },
-      y: {
-        grid: { color: '#E4D9B8' },
-        ticks: { font: { family: 'Inter', size: 10 }, color: '#6B7263', callback: (v) => brl.format(v) },
-      },
-    },
-  };
+function fmtCompact(v) {
+  const sign = v < 0 ? '-' : '';
+  const abs = Math.abs(v);
+  if (abs >= 1000) {
+    const k = abs / 1000;
+    return sign + (k >= 10 ? Math.round(k) : k.toFixed(1).replace('.', ',')) + 'k';
+  }
+  return sign + Math.round(abs);
+}
+
+function shortLabel(label) {
+  return label.length > 4 ? label.slice(0, 3) : label;
+}
+
+function renderCharts() {
+  const months = state.months;
+  const saldos = months.map(m => monthSaldo(m.id));
+  const incomes = months.map(m => groupTotal('income', m.id));
+  const expenses = months.map(m => groupTotal('fixed', m.id) + groupTotal('variable', m.id));
+
+  renderDivergingChart(document.getElementById('chartBalance'), months, saldos);
+  renderGroupedChart(document.getElementById('chartIncomeExpense'), months, incomes, expenses);
+  renderCategoryBreakdown();
+  renderPeriodSummary();
+}
+
+function categoryTotals(monthId) {
+  const totals = {};
+  ['fixed', 'variable'].forEach(groupKey => {
+    state.groups[groupKey].forEach(row => {
+      const cat = rowCategory(row);
+      totals[cat] = (totals[cat] || 0) + num(row.values[monthId]);
+    });
+  });
+  return totals;
+}
+
+function renderCategoryBreakdown() {
+  const container = document.getElementById('categoryBreakdown');
+  const subEl = document.getElementById('catBreakdownMonth');
+  if (!container) return;
+  const m = state.months.find(x => x.id === activeMonthId);
+  if (subEl) subEl.textContent = m ? `— ${m.label}` : '';
+
+  const totals = categoryTotals(activeMonthId);
+  const entries = Object.entries(totals).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]);
+
+  container.innerHTML = '';
+  if (!entries.length) {
+    container.innerHTML = '<p class="chart-svg__empty">Nenhuma despesa lançada neste mês ainda.</p>';
+    return;
+  }
+  const maxVal = entries[0][1];
+  entries.forEach(([catKey, val]) => {
+    const meta = CATEGORY_META[catKey];
+    const catRow = document.createElement('div');
+    catRow.className = 'catRow';
+
+    const dot = document.createElement('span');
+    dot.className = 'catRow__dot';
+    dot.style.background = meta.color;
+
+    const label = document.createElement('span');
+    label.className = 'catRow__label';
+    label.textContent = meta.label;
+
+    const barWrap = document.createElement('div');
+    barWrap.className = 'catRow__bar';
+    const fill = document.createElement('div');
+    fill.className = 'catRow__fill';
+    fill.style.width = (val / maxVal * 100) + '%';
+    fill.style.background = meta.color;
+    barWrap.appendChild(fill);
+
+    const value = document.createElement('span');
+    value.className = 'catRow__value';
+    value.textContent = brl.format(val);
+
+    catRow.appendChild(dot);
+    catRow.appendChild(label);
+    catRow.appendChild(barWrap);
+    catRow.appendChild(value);
+    container.appendChild(catRow);
+  });
+}
+
+function renderPeriodSummary() {
+  const el = document.getElementById('periodIncome');
+  if (!el) return;
+  const months = state.months;
+  const totalIncome = months.reduce((sum, m) => sum + groupTotal('income', m.id), 0);
+  const totalExpense = months.reduce((sum, m) => sum + groupTotal('fixed', m.id) + groupTotal('variable', m.id), 0);
+  const totalBalance = totalIncome - totalExpense;
+  const avg = months.length ? totalBalance / months.length : 0;
+
+  document.getElementById('periodIncome').textContent = brl.format(totalIncome);
+  document.getElementById('periodExpense').textContent = brl.format(totalExpense);
+  const balEl = document.getElementById('periodBalance');
+  balEl.textContent = brl.format(totalBalance);
+  balEl.style.color = totalBalance >= 0 ? 'var(--positive)' : 'var(--negative)';
+  const avgEl = document.getElementById('periodAverage');
+  avgEl.textContent = brl.format(avg);
+  avgEl.style.color = avg >= 0 ? 'var(--positive)' : 'var(--negative)';
+
+  document.getElementById('periodHint').textContent =
+    `Considerando ${months.length} ${months.length === 1 ? 'mês lançado' : 'meses lançados'}, de ${months[0]?.label} a ${months[months.length - 1]?.label}.`;
+}
+
+function renderDivergingChart(container, months, values) {
+  container.innerHTML = '';
+  if (!months.length) { container.innerHTML = '<p class="chart-svg__empty">Sem dados ainda.</p>'; return; }
+
+  const slot = 58;
+  const width = Math.max(months.length * slot, 300);
+  const height = 190;
+  const midY = height / 2;
+  const maxAbs = Math.max(1, ...values.map(v => Math.abs(v)));
+  const barMax = midY - 34;
+  const barW = slot * 0.46;
+
+  const svg = svgEl('svg', { viewBox: `0 0 ${width} ${height}`, width: Math.max(width, 300), height, preserveAspectRatio: 'xMinYMid meet' });
+  svg.appendChild(svgEl('line', { x1: 0, y1: midY, x2: width, y2: midY, stroke: '#DDD0A8', 'stroke-width': 1 }));
+
+  months.forEach((m, i) => {
+    const v = values[i];
+    const cx = i * slot + slot / 2;
+    const h = Math.abs(v) / maxAbs * barMax;
+    const y = v >= 0 ? midY - h : midY;
+    const color = v >= 0 ? '#2E6B4F' : '#9C3B2D';
+
+    const rect = svgEl('rect', { x: cx - barW / 2, y, width: barW, height: Math.max(h, 2), rx: 3, fill: color });
+    const title = svgEl('title', {});
+    title.textContent = `${m.label}: ${brlPrecise.format(v)}`;
+    rect.appendChild(title);
+    svg.appendChild(rect);
+
+    const valueLabel = svgEl('text', {
+      x: cx, y: v >= 0 ? Math.max(y - 6, 10) : y + h + 14,
+      'text-anchor': 'middle', 'font-size': '9', fill: '#6B7263', 'font-family': 'Inter, sans-serif',
+    });
+    valueLabel.textContent = fmtCompact(v);
+    svg.appendChild(valueLabel);
+
+    const monthLabel = svgEl('text', {
+      x: cx, y: height - 6, 'text-anchor': 'middle', 'font-size': '9.5', fill: '#6B7263', 'font-family': 'Inter, sans-serif',
+    });
+    monthLabel.textContent = shortLabel(m.label);
+    svg.appendChild(monthLabel);
+  });
+
+  container.appendChild(svg);
+}
+
+function renderGroupedChart(container, months, incomes, expenses) {
+  container.innerHTML = '';
+  if (!months.length) { container.innerHTML = '<p class="chart-svg__empty">Sem dados ainda.</p>'; return; }
+
+  const slot = 58;
+  const width = Math.max(months.length * slot, 300);
+  const height = 190;
+  const baseline = height - 24;
+  const barMax = baseline - 22;
+  const maxVal = Math.max(1, ...incomes, ...expenses);
+  const barW = 13;
+  const gap = 3;
+
+  const svg = svgEl('svg', { viewBox: `0 0 ${width} ${height}`, width: Math.max(width, 300), height, preserveAspectRatio: 'xMinYMid meet' });
+  svg.appendChild(svgEl('line', { x1: 0, y1: baseline, x2: width, y2: baseline, stroke: '#DDD0A8', 'stroke-width': 1 }));
+
+  months.forEach((m, i) => {
+    const cx = i * slot + slot / 2;
+    const hIncome = incomes[i] / maxVal * barMax;
+    const hExpense = expenses[i] / maxVal * barMax;
+    const xIncome = cx - gap / 2 - barW;
+    const xExpense = cx + gap / 2;
+
+    const rIncome = svgEl('rect', { x: xIncome, y: baseline - hIncome, width: barW, height: Math.max(hIncome, 1), rx: 2, fill: '#A9803F' });
+    const tIncome = svgEl('title', {}); tIncome.textContent = `${m.label} — Rendimentos: ${brlPrecise.format(incomes[i])}`;
+    rIncome.appendChild(tIncome);
+
+    const rExpense = svgEl('rect', { x: xExpense, y: baseline - hExpense, width: barW, height: Math.max(hExpense, 1), rx: 2, fill: '#9C3B2D' });
+    const tExpense = svgEl('title', {}); tExpense.textContent = `${m.label} — Despesas: ${brlPrecise.format(expenses[i])}`;
+    rExpense.appendChild(tExpense);
+
+    svg.appendChild(rIncome);
+    svg.appendChild(rExpense);
+
+    const monthLabel = svgEl('text', {
+      x: cx, y: height - 6, 'text-anchor': 'middle', 'font-size': '9.5', fill: '#6B7263', 'font-family': 'Inter, sans-serif',
+    });
+    monthLabel.textContent = shortLabel(m.label);
+    svg.appendChild(monthLabel);
+  });
+
+  container.appendChild(svg);
 }
 
 /* =========================================================
@@ -530,6 +755,17 @@ function addRowToGroup(groupKey) {
   renderGroups();
   renderTable();
   renderCharts();
+}
+
+function moveItem(groupKey, rowId, direction) {
+  const arr = state.groups[groupKey];
+  const idx = arr.findIndex(r => r.id === rowId);
+  const newIdx = idx + direction;
+  if (idx === -1 || newIdx < 0 || newIdx >= arr.length) return;
+  [arr[idx], arr[newIdx]] = [arr[newIdx], arr[idx]];
+  saveState();
+  renderGroups();
+  renderTable();
 }
 
 function removeRow(groupKey, rowId) {
@@ -549,6 +785,21 @@ function addMonth() {
     state.groups[groupKey].forEach(row => {
       // Despesas fixas costumam se repetir; demais começam em branco.
       row.values[newMonth.id] = groupKey === 'fixed' && prev ? (row.values[prev.id] ?? null) : null;
+    });
+  });
+  activeMonthId = newMonth.id;
+  saveState();
+  renderAll();
+}
+
+function duplicateMonth() {
+  const source = state.months.find(m => m.id === activeMonthId);
+  if (!source) return;
+  const newMonth = { id: uid('m'), label: 'Cópia de ' + source.label };
+  state.months.push(newMonth);
+  GROUP_ORDER.forEach(groupKey => {
+    state.groups[groupKey].forEach(row => {
+      row.values[newMonth.id] = row.values[source.id] ?? null;
     });
   });
   activeMonthId = newMonth.id;
@@ -609,6 +860,7 @@ function renderAll() {
 }
 
 document.getElementById('btnAddMonth').addEventListener('click', addMonth);
+document.getElementById('btnDuplicateMonth').addEventListener('click', duplicateMonth);
 document.getElementById('btnExport').addEventListener('click', exportBackup);
 document.getElementById('fileImport').addEventListener('change', (e) => {
   if (e.target.files[0]) importBackup(e.target.files[0]);

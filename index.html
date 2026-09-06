@@ -67,7 +67,10 @@
 
     <div class="groups" id="groupsContainer"></div>
 
-    <button class="addMonthBtn" id="btnAddMonth">+ Adicionar novo mês</button>
+    <div class="monthActions">
+      <button class="addMonthBtn" id="btnAddMonth">+ Mês novo (vazio)</button>
+      <button class="addMonthBtn addMonthBtn--ghost" id="btnDuplicateMonth">⧉ Duplicar mês atual</button>
+    </div>
   </section>
 
   <!-- ===================== TABLE VIEW ===================== -->
@@ -88,12 +91,44 @@
   <section class="charts">
     <div class="chart-card">
       <h2>Saldo por mês</h2>
-      <canvas id="chartBalance" height="220"></canvas>
+      <div class="chart-svg" id="chartBalance"></div>
     </div>
     <div class="chart-card">
       <h2>Rendimentos × Despesas</h2>
-      <canvas id="chartIncomeExpense" height="220"></canvas>
+      <div class="chart-legend">
+        <span class="chart-legend__item"><i style="background:#A9803F"></i>Rendimentos</span>
+        <span class="chart-legend__item"><i style="background:#9C3B2D"></i>Despesas</span>
+      </div>
+      <div class="chart-svg" id="chartIncomeExpense"></div>
     </div>
+    <div class="chart-card">
+      <h2>Despesas por categoria <span class="chart-card__sub" id="catBreakdownMonth"></span></h2>
+      <div id="categoryBreakdown"></div>
+    </div>
+  </section>
+
+  <!-- ===================== PERIOD SUMMARY ===================== -->
+  <section class="periodSummary" id="periodSummary" aria-label="Resumo do período">
+    <h2>Resumo geral</h2>
+    <div class="periodSummary__grid">
+      <div class="periodSummary__item">
+        <span>Total de rendimentos</span>
+        <strong id="periodIncome">R$ 0</strong>
+      </div>
+      <div class="periodSummary__item">
+        <span>Total de despesas</span>
+        <strong id="periodExpense">R$ 0</strong>
+      </div>
+      <div class="periodSummary__item">
+        <span>Saldo do período</span>
+        <strong id="periodBalance">R$ 0</strong>
+      </div>
+      <div class="periodSummary__item">
+        <span>Média mensal de saldo</span>
+        <strong id="periodAverage">R$ 0</strong>
+      </div>
+    </div>
+    <p class="periodSummary__hint" id="periodHint"></p>
   </section>
 
   <footer class="footer">
@@ -102,7 +137,6 @@
 
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
