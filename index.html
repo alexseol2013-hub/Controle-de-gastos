@@ -29,6 +29,14 @@
     <button class="viewToggle__btn" data-mode="table" role="tab">Visão geral</button>
   </div>
 
+  <div class="backupReminder" id="backupReminder" hidden>
+    <span>📦 Faz alguns dias que você não exporta um backup dos seus dados.</span>
+    <div class="backupReminder__actions">
+      <button id="backupReminderExport">Exportar agora</button>
+      <button id="backupReminderSnooze">Agora não</button>
+    </div>
+  </div>
+
   <!-- ===================== MONTH VIEW ===================== -->
   <section id="monthView" class="monthView">
 
@@ -39,6 +47,7 @@
           <span id="monthPickerLabel">—</span>
           <svg width="10" height="6" viewBox="0 0 10 6" fill="none"><path d="M1 1L5 5L9 1" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
         </button>
+        <button class="hero__edit" id="renameMonthBtn" aria-label="Renomear mês" title="Renomear mês">✎</button>
         <button class="hero__arrow" id="nextMonth" aria-label="Próximo mês">›</button>
       </div>
 

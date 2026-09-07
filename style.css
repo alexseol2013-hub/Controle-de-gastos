@@ -99,6 +99,35 @@ body{
   color: var(--paper);
 }
 
+/* ---------- backup reminder banner ---------- */
+.backupReminder{
+  margin: 0 20px 16px;
+  background: #FBF3DE;
+  border: 1px solid var(--gold-soft);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.backupReminder span{
+  font-family: var(--sans);
+  font-size: 12.5px;
+  color: var(--ink);
+}
+.backupReminder__actions{ display: flex; gap: 8px; }
+.backupReminder__actions button{
+  font-family: var(--sans);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 7px 12px;
+  border-radius: 999px;
+  border: none;
+  cursor: pointer;
+}
+#backupReminderExport{ background: var(--gold); color: #1D1305; }
+#backupReminderSnooze{ background: transparent; color: var(--ink-soft); border: 1px solid var(--paper-line); }
+
 /* ---------- hero (single dark panel — balance + month nav) ---------- */
 .hero{
   position: relative;
@@ -127,6 +156,17 @@ body{
 }
 .hero__arrow:hover{ border-color: var(--gold-soft); color: var(--gold-soft); }
 .hero__arrow:disabled{ opacity: .25; cursor: default; }
+.hero__edit{
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  border: 1px solid rgba(245,240,225,.2);
+  background: transparent;
+  color: rgba(245,240,225,.6);
+  font-size: 12px;
+  cursor: pointer;
+  margin-left: -6px;
+}
+.hero__edit:hover{ border-color: var(--gold-soft); color: var(--gold-soft); }
 .hero__month{
   display:flex; align-items:center; gap: 7px;
   background: transparent; border:none; cursor:pointer;
@@ -305,6 +345,59 @@ body{
   font-family: var(--sans);
 }
 
+.itemRow__paid{
+  width: 17px; height: 17px;
+  border-radius: 50%;
+  border: 1.5px solid var(--paper-line);
+  background: var(--card);
+  flex-shrink: 0;
+  cursor: pointer;
+  padding: 0;
+  font-size: 10px;
+  line-height: 1;
+  color: #fff;
+}
+.itemRow__paid.is-paid{
+  background: var(--positive);
+  border-color: var(--positive);
+}
+.itemRow__name.is-paid{
+  color: var(--ink-faint);
+  text-decoration: line-through;
+}
+
+.itemRow--opening{
+  background: rgba(169,128,63,.07);
+  border-radius: var(--radius-sm);
+  margin-bottom: 2px;
+  padding-left: 4px; padding-right: 4px;
+}
+.itemRow__name--locked{
+  flex: 1;
+  font-family: var(--sans);
+  font-size: 13.5px;
+  font-style: italic;
+  color: var(--ink-soft);
+  padding: 4px 2px;
+}
+.itemRow__value--readonly{
+  width: 92px;
+  flex-shrink: 0;
+  text-align: right;
+  font-family: var(--sans);
+  font-variant-numeric: tabular-nums;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  padding: 7px 8px;
+}
+.itemRow__lock{
+  flex-shrink: 0;
+  font-size: 11px;
+  width: 20px;
+  text-align: center;
+}
+
 .itemRow__name{
   flex: 1;
   min-width: 0;
@@ -437,6 +530,11 @@ tr.group-header td, tr.group-header th{
   background: #F1EAD5;
   border-bottom: 1px solid var(--paper-line);
   padding-top: 12px;
+}
+tr.opening-balance-row td, tr.opening-balance-row th{
+  font-style: italic;
+  color: var(--ink-soft);
+  background: rgba(169,128,63,.06);
 }
 tr.group-total th, tr.group-total td{
   font-weight: 600;

@@ -23,12 +23,54 @@ const CATEGORY_META = {
   pets:        { label: 'Pets',               color: '#8C6F52' },
   dividas:     { label: 'Dívidas / Cartão',   color: '#7A3D55' },
   lazer:       { label: 'Lazer',              color: '#3D8C6B' },
+  imprevistos: { label: 'Imprevistos',        color: '#B8862E' },
   outros:      { label: 'Outros',             color: '#9AA093' },
 };
 const CATEGORY_ORDER = Object.keys(CATEGORY_META);
 
+// Ordem importa: categorias mais "específicas" primeiro, pra evitar que um
+// nome como "Cartão de crédito mercado pago" caia em Alimentação por causa
+// da palavra "mercado" antes de bater em Dívidas por causa de "cartão".
+const CATEGORY_KEYWORDS = [
+  ['dividas',     ['cartao', 'emprestimo', 'financiamento', 'parcela', 'fatura']],
+  ['moradia',     ['casa', 'aluguel', 'condomin', 'luz', 'energia', 'agua', 'net', 'internet', 'iptu']],
+  ['transporte',  ['gasolina', 'combust', 'uber', 'onibus', 'carro', 'moto', 'estacionamento', 'pedagio']],
+  ['saude',       ['remedio', 'farmacia', 'academia', 'medico', 'dentista', 'plano de saude']],
+  ['cuidados',    ['barbeiro', 'cabelo', 'unha', 'sobrancelha', 'salao', 'estetica']],
+  ['pets',        ['gato', 'cachorro', 'pet', 'racao', 'veterinari']],
+  ['educacao',    ['faculdade', 'curso', 'escola', 'mensalidade']],
+  ['lazer',       ['cinema', 'netflix', 'streaming', 'viagem', 'lazer', 'show']],
+  ['alimentacao', ['mercado', 'supermercado', 'feira', 'ifood', 'restaurante', 'padaria', 'alimenta']],
+  ['imprevistos', ['sem previsao', 'imprevist', 'margem']],
+];
+
+// Remove acentos pra "Condomínio" bater com a palavra-chave "condomin",
+// "água" bater com "agua", etc. — sem isso, qualquer nome acentuado que
+// não seja uma cópia exata do texto da palavra-chave passava direto.
+function stripAccents(s) {
+  return (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
+function guessCategory(name) {
+  const n = stripAccents(name).toLowerCase();
+  for (const [cat, keywords] of CATEGORY_KEYWORDS) {
+    if (keywords.some(k => n.includes(stripAccents(k).toLowerCase()))) return cat;
+  }
+  return 'outros';
+}
+
 function rowCategory(row) {
-  return CATEGORY_META[row.category] ? row.category : 'outros';
+  if (CATEGORY_META[row.category]) return row.category;
+  return guessCategory(row.name);
+}
+
+const MONTH_NAMES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+
+function nextMonthLabel(label) {
+  const clean = (label || '').trim().toLowerCase();
+  const idx = MONTH_NAMES.findIndex(m => clean.startsWith(m.toLowerCase()));
+  if (idx !== -1) return MONTH_NAMES[(idx + 1) % 12];
+  return 'Cópia de ' + label;
 }
 
 function uid(prefix) {
@@ -42,12 +84,13 @@ function seedData() {
   function row(name, vals, category) {
     const values = {};
     months.forEach((m, i) => { values[m.id] = vals[i] ?? null; });
-    const r = { id: uid('r'), name, values };
+    const r = { id: uid('r'), name, values, paid: {} };
     if (category) r.category = category;
     return r;
   }
 
   return {
+    initialBalance: 3500,
     months,
     groups: {
       income: [
@@ -56,7 +99,6 @@ function seedData() {
         row('Mãe celular + cartão', [null, 533, 161, 161, 161, 161, 161, 161]),
         row('Mãe XBOX + controle + Nick', [null, 499, 169, 169, 169, 169, 169, 169]),
         row('Mãe empréstimo', [null, 481, 160, 160, 160, 160, 160, 160]),
-        row('Sobra do mês anterior', [3500, 3500, 5098, 3821, 4194, 15167, 13940, 13712]),
       ],
       fixed: [
         row('Casa', [null, null, 1460, 1460, 1460, 1460, 1460, 1460], 'moradia'),
@@ -94,11 +136,54 @@ function loadState() {
   return seedData();
 }
 
+// Roda em todo carregamento — é seguro rodar de novo (idempotente).
+// Corrige dados antigos: extrai a antiga linha manual de "Sobra do mês
+// anterior" para o novo Saldo Inicial automático, some com placeholders
+// vazios, remove sujeira de meses já excluídos, e garante que cada linha
+// de despesa tenha um mapa de status "pago".
+function migrateState(s) {
+  if (!s.groups) s.groups = { income: [], fixed: [], variable: [] };
+  if (!s.months) s.months = [];
+  const validMonthIds = new Set(s.months.map(m => m.id));
+
+  s.months.forEach(m => { m.label = (m.label || '').trim() || m.label; });
+
+  if (s.initialBalance === undefined) {
+    const sobraRow = (s.groups.income || []).find(r => r.name.toLowerCase().includes('sobra'));
+    const firstId = s.months[0]?.id;
+    const v = sobraRow && firstId ? sobraRow.values[firstId] : null;
+    s.initialBalance = typeof v === 'number' ? v : 0;
+  }
+  s.groups.income = (s.groups.income || []).filter(r => !r.name.toLowerCase().includes('sobra'));
+
+  GROUP_ORDER.forEach(groupKey => {
+    s.groups[groupKey] = (s.groups[groupKey] || []).filter(r => {
+      const isPlaceholder = r.name.trim().toLowerCase() === 'novo item';
+      const hasAnyValue = Object.values(r.values || {}).some(v => typeof v === 'number');
+      return !(isPlaceholder && !hasAnyValue);
+    });
+  });
+
+  GROUP_ORDER.forEach(groupKey => {
+    s.groups[groupKey].forEach(r => {
+      r.name = (r.name || '').trim() || r.name;
+      Object.keys(r.values || {}).forEach(k => { if (!validMonthIds.has(k)) delete r.values[k]; });
+      if (groupKey !== 'income') {
+        if (!r.paid) r.paid = {};
+        Object.keys(r.paid).forEach(k => { if (!validMonthIds.has(k)) delete r.paid[k]; });
+      }
+    });
+  });
+
+  return s;
+}
+
 function saveState() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
 
-let state = loadState();
+let state = migrateState(loadState());
+saveState();
 let activeMonthId = state.months[state.months.length - 1]?.id;
 let viewMode = localStorage.getItem(VIEW_KEY) || 'month';
 let collapsedGroups = {}; // session-only, per groupKey
@@ -112,19 +197,27 @@ function groupTotal(groupKey, monthId) {
   return state.groups[groupKey].reduce((sum, r) => sum + num(r.values[monthId]), 0);
 }
 
-function findSobraRow() {
-  return state.groups.income.find(r => r.name.toLowerCase().includes('sobra'));
+// Dinheiro genuinamente NOVO que entrou/saiu naquele mês — sem contar
+// o que só rolou do mês anterior (isso agora vive fora do grupo de
+// rendimentos, no Saldo Inicial automático).
+function netGenerated(monthId) {
+  return groupTotal('income', monthId) - groupTotal('fixed', monthId) - groupTotal('variable', monthId);
 }
 
-// Renda do mês SEM contar a "sobra" (dinheiro que só rolou do mês
-// anterior) — ou seja, dinheiro genuinamente novo que entrou.
-function recurringIncomeTotal(monthId) {
-  const sobraRow = findSobraRow();
-  return state.groups.income.reduce((sum, r) => sum + (r === sobraRow ? 0 : num(r.values[monthId])), 0);
+// Quanto dinheiro você tinha ANTES desse mês começar — vem do saldo real
+// do mês anterior (recursivo até o Saldo Inicial lá do começo). Isso é
+// calculado, nunca digitado à mão (exceto o ponto de partida).
+function openingBalance(monthId) {
+  let bal = num(state.initialBalance);
+  for (const m of state.months) {
+    if (m.id === monthId) return bal;
+    bal += netGenerated(m.id);
+  }
+  return bal;
 }
 
 function monthSaldo(monthId) {
-  return groupTotal('income', monthId) - groupTotal('fixed', monthId) - groupTotal('variable', monthId);
+  return openingBalance(monthId) + netGenerated(monthId);
 }
 
 function monthIndex(monthId) {
@@ -163,8 +256,8 @@ function renderHero() {
 
   const income = groupTotal('income', m.id);
   const expense = groupTotal('fixed', m.id) + groupTotal('variable', m.id);
-  const saldo = income - expense;
-  const netGenerated = recurringIncomeTotal(m.id) - expense;
+  const saldo = monthSaldo(m.id);
+  const gerado = netGenerated(m.id);
 
   const balEl = document.getElementById('heroBalance');
   balEl.textContent = brlPrecise.format(saldo);
@@ -174,8 +267,8 @@ function renderHero() {
   document.getElementById('heroIncome').textContent = brl.format(income);
   document.getElementById('heroExpense').textContent = brl.format(expense);
   const cumEl = document.getElementById('heroCumulative');
-  cumEl.textContent = brl.format(netGenerated);
-  cumEl.style.color = netGenerated >= 0 ? '#B7E0C4' : '#F0B3A6';
+  cumEl.textContent = brl.format(gerado);
+  cumEl.style.color = gerado >= 0 ? '#B7E0C4' : '#F0B3A6';
 
   renderHeroDelta(idx, saldo);
 }
@@ -228,6 +321,17 @@ function toggleMonthMenu() {
 }
 
 document.getElementById('monthPicker').addEventListener('click', toggleMonthMenu);
+document.getElementById('renameMonthBtn').addEventListener('click', () => {
+  const m = state.months[monthIndex(activeMonthId)];
+  if (!m) return;
+  const novo = prompt('Renomear este mês:', m.label);
+  if (novo && novo.trim()) {
+    m.label = novo.trim();
+    saveState();
+    renderHero();
+    closeMonthMenu();
+  }
+});
 document.addEventListener('click', (e) => {
   const menu = document.getElementById('monthMenu');
   if (!menu.hidden && !menu.contains(e.target) && !e.target.closest('#monthPicker')) {
@@ -242,6 +346,54 @@ document.getElementById('nextMonth').addEventListener('click', () => {
   const idx = monthIndex(activeMonthId);
   if (idx < state.months.length - 1) { activeMonthId = state.months[idx + 1].id; renderHero(); renderGroups(); renderCategoryBreakdown(); }
 });
+
+function renderOpeningBalanceRow() {
+  const idx = monthIndex(activeMonthId);
+  const isFirst = idx === 0;
+  const row = document.createElement('div');
+  row.className = 'itemRow itemRow--opening';
+
+  const spacer = document.createElement('div');
+  spacer.className = 'itemRow__reorder';
+  row.appendChild(spacer);
+
+  const label = document.createElement('span');
+  label.className = 'itemRow__name itemRow__name--locked';
+  label.textContent = isFirst ? 'Saldo inicial (ponto de partida)' : 'Saldo inicial (do mês anterior)';
+  row.appendChild(label);
+
+  if (isFirst) {
+    const input = document.createElement('input');
+    input.className = 'itemRow__value';
+    input.type = 'text';
+    input.inputMode = 'decimal';
+    input.value = state.initialBalance ? String(state.initialBalance) : '';
+    input.placeholder = '—';
+    input.addEventListener('change', () => {
+      const parsed = parseFloat(input.value.replace(',', '.'));
+      state.initialBalance = isNaN(parsed) ? 0 : parsed;
+      saveState();
+      renderAll();
+    });
+    row.appendChild(input);
+    const spacerEnd = document.createElement('span');
+    spacerEnd.style.width = '20px';
+    spacerEnd.style.flexShrink = '0';
+    row.appendChild(spacerEnd);
+  } else {
+    const val = document.createElement('span');
+    val.className = 'itemRow__value itemRow__value--readonly';
+    val.textContent = brl.format(openingBalance(activeMonthId));
+    row.appendChild(val);
+    const lock = document.createElement('span');
+    lock.className = 'itemRow__lock';
+    lock.textContent = '🔒';
+    lock.title = 'Calculado automaticamente a partir do saldo do mês anterior — não dá pra editar direto';
+    row.appendChild(lock);
+  }
+
+  return row;
+}
 
 function renderGroups() {
   const container = document.getElementById('groupsContainer');
@@ -277,6 +429,10 @@ function renderGroups() {
 
     const body = document.createElement('div');
     body.className = 'groupCard__body';
+
+    if (groupKey === 'income') {
+      body.appendChild(renderOpeningBalanceRow());
+    }
 
     state.groups[groupKey].forEach((row, idx, arr) => {
       const itemRow = document.createElement('div');
@@ -319,11 +475,25 @@ function renderGroups() {
           renderCharts();
         });
         itemRow.appendChild(catSelect);
+
+        const isPaid = !!(row.paid && row.paid[activeMonthId]);
+        const paidBtn = document.createElement('button');
+        paidBtn.className = 'itemRow__paid' + (isPaid ? ' is-paid' : '');
+        paidBtn.textContent = isPaid ? '✓' : '';
+        paidBtn.title = isPaid ? 'Pago — toque para marcar como pendente' : 'Pendente — toque para marcar como pago';
+        paidBtn.addEventListener('click', () => {
+          row.paid = row.paid || {};
+          row.paid[activeMonthId] = !row.paid[activeMonthId];
+          saveState();
+          renderGroups();
+        });
+        itemRow.appendChild(paidBtn);
       }
 
       const nameInput = document.createElement('input');
       nameInput.className = 'itemRow__name';
       nameInput.value = row.name;
+      if (groupKey !== 'income' && row.paid && row.paid[activeMonthId]) nameInput.classList.add('is-paid');
       nameInput.addEventListener('change', () => { row.name = nameInput.value || row.name; saveState(); });
 
       const valueInput = document.createElement('input');
@@ -332,7 +502,7 @@ function renderGroups() {
       valueInput.inputMode = 'decimal';
       const v = row.values[activeMonthId];
       valueInput.value = v === null || v === undefined ? '' : String(v);
-      valueInput.placeholder = 'R$ 0';
+      valueInput.placeholder = '—';
       valueInput.addEventListener('change', () => {
         const parsed = parseFloat(valueInput.value.replace(',', '.'));
         row.values[activeMonthId] = isNaN(parsed) ? null : parsed;
@@ -447,6 +617,39 @@ function renderTableGroupRows(groupKey, tbody) {
   state.months.forEach(() => headerRow.appendChild(document.createElement('td')));
   tbody.appendChild(headerRow);
 
+  if (groupKey === 'income') {
+    const obRow = document.createElement('tr');
+    obRow.className = 'opening-balance-row';
+    const obTh = document.createElement('th');
+    obTh.className = 'cell cell--label';
+    obTh.textContent = 'Saldo inicial 🔒';
+    obTh.title = 'Automático — calculado a partir do saldo do mês anterior (exceto o primeiro mês)';
+    obRow.appendChild(obTh);
+    state.months.forEach((m, i) => {
+      const td = document.createElement('td');
+      if (i === 0) {
+        const input = document.createElement('input');
+        input.className = 'value-input';
+        input.type = 'text';
+        input.inputMode = 'decimal';
+        input.value = state.initialBalance ? String(state.initialBalance) : '';
+        input.placeholder = '—';
+        input.addEventListener('change', () => {
+          const parsed = parseFloat(input.value.replace(',', '.'));
+          state.initialBalance = isNaN(parsed) ? 0 : parsed;
+          saveState();
+          renderAll();
+        });
+        td.appendChild(input);
+      } else {
+        td.textContent = brl.format(openingBalance(m.id));
+        td.style.opacity = '.65';
+      }
+      obRow.appendChild(td);
+    });
+    tbody.appendChild(obRow);
+  }
+
   state.groups[groupKey].forEach(row => {
     const tr = document.createElement('tr');
     tr.appendChild(makeRowLabelCell(row, groupKey));
@@ -520,7 +723,7 @@ function renderTableFoot() {
   cTh.textContent = 'Gerado no mês (sem sobra)';
   cumRow.appendChild(cTh);
   state.months.forEach(m => {
-    const s = recurringIncomeTotal(m.id) - groupTotal('fixed', m.id) - groupTotal('variable', m.id);
+    const s = netGenerated(m.id);
     const td = document.createElement('td');
     td.className = 'balance-cell ' + (s >= 0 ? 'pos' : 'neg');
     td.textContent = brl.format(s);
@@ -640,12 +843,10 @@ function renderPeriodSummary() {
   const months = state.months;
   if (!months.length) return;
 
-  // Rendimentos e despesas somados do período, sem contar a "sobra"
-  // (senão o mesmo dinheiro rolando de mês em mês seria somado várias vezes).
-  const totalIncome = months.reduce((sum, m) => sum + recurringIncomeTotal(m.id), 0);
+  const totalIncome = months.reduce((sum, m) => sum + groupTotal('income', m.id), 0);
   const totalExpense = months.reduce((sum, m) => sum + groupTotal('fixed', m.id) + groupTotal('variable', m.id), 0);
-  const netGenerated = totalIncome - totalExpense;
-  const avg = netGenerated / months.length;
+  const totalNetGenerated = totalIncome - totalExpense;
+  const avg = totalNetGenerated / months.length;
   const currentBalance = monthSaldo(months[months.length - 1].id);
 
   document.getElementById('periodIncome').textContent = brl.format(totalIncome);
@@ -757,7 +958,9 @@ function renderGroupedChart(container, months, incomes, expenses) {
 function addRowToGroup(groupKey) {
   const values = {};
   state.months.forEach(m => { values[m.id] = null; });
-  state.groups[groupKey].push({ id: uid('r'), name: 'Novo item', values });
+  const newRow = { id: uid('r'), name: 'Novo item', values };
+  if (groupKey !== 'income') newRow.paid = {};
+  state.groups[groupKey].push(newRow);
   saveState();
   renderGroups();
   renderTable();
@@ -786,7 +989,7 @@ function removeRow(groupKey, rowId) {
 
 function addMonth() {
   const prev = state.months[state.months.length - 1];
-  const newMonth = { id: uid('m'), label: 'Novo mês' };
+  const newMonth = { id: uid('m'), label: prev ? nextMonthLabel(prev.label) : 'Novo mês' };
   state.months.push(newMonth);
   GROUP_ORDER.forEach(groupKey => {
     state.groups[groupKey].forEach(row => {
@@ -802,11 +1005,11 @@ function addMonth() {
 function duplicateMonth() {
   const source = state.months.find(m => m.id === activeMonthId);
   if (!source) return;
-  const newMonth = { id: uid('m'), label: 'Cópia de ' + source.label };
+  const newMonth = { id: uid('m'), label: nextMonthLabel(source.label) };
   state.months.push(newMonth);
   GROUP_ORDER.forEach(groupKey => {
     state.groups[groupKey].forEach(row => {
-      row.values[newMonth.id] = row.values[source.id] ?? null;
+      row.values[newMonth.id] = groupKey === 'variable' ? null : (row.values[source.id] ?? null);
     });
   });
   activeMonthId = newMonth.id;
@@ -818,6 +1021,12 @@ function removeMonth(monthId) {
   if (state.months.length <= 1) return;
   if (!confirm('Remover este mês e todos os valores lançados nele?')) return;
   state.months = state.months.filter(m => m.id !== monthId);
+  GROUP_ORDER.forEach(groupKey => {
+    state.groups[groupKey].forEach(row => {
+      delete row.values[monthId];
+      if (row.paid) delete row.paid[monthId];
+    });
+  });
   if (activeMonthId === monthId) activeMonthId = state.months[state.months.length - 1].id;
   saveState();
   closeMonthMenu();
@@ -836,6 +1045,8 @@ function exportBackup() {
   a.download = `livro-caixa-backup-${new Date().toISOString().slice(0, 10)}.json`;
   a.click();
   URL.revokeObjectURL(url);
+  localStorage.setItem(BACKUP_LAST_KEY, String(Date.now()));
+  document.getElementById('backupReminder').hidden = true;
 }
 
 function importBackup(file) {
@@ -854,6 +1065,35 @@ function importBackup(file) {
   };
   reader.readAsText(file);
 }
+
+/* =========================================================
+   LEMBRETE DE BACKUP
+   Não existe backend nesse app (é um site estático), então não dá pra
+   ter sincronização automática em nuvem de verdade. O melhor que dá
+   pra fazer sem servidor é lembrar a pessoa de exportar de vez em
+   quando, pra não perder os dados se limpar o navegador.
+========================================================= */
+
+const BACKUP_LAST_KEY = 'livroCaixa_lastBackup';
+const BACKUP_SNOOZE_KEY = 'livroCaixa_backupSnooze';
+const BACKUP_REMINDER_DAYS = 4;
+
+function checkBackupReminder() {
+  const banner = document.getElementById('backupReminder');
+  if (!banner) return;
+  const now = Date.now();
+  const snooze = Number(localStorage.getItem(BACKUP_SNOOZE_KEY) || 0);
+  if (now < snooze) { banner.hidden = true; return; }
+  const last = Number(localStorage.getItem(BACKUP_LAST_KEY) || 0);
+  const daysSince = (now - last) / (1000 * 60 * 60 * 24);
+  banner.hidden = daysSince < BACKUP_REMINDER_DAYS;
+}
+
+document.getElementById('backupReminderExport').addEventListener('click', exportBackup);
+document.getElementById('backupReminderSnooze').addEventListener('click', () => {
+  localStorage.setItem(BACKUP_SNOOZE_KEY, String(Date.now() + 24 * 60 * 60 * 1000));
+  document.getElementById('backupReminder').hidden = true;
+});
 
 /* =========================================================
    INIT
@@ -876,3 +1116,4 @@ document.getElementById('fileImport').addEventListener('change', (e) => {
 
 setViewMode(viewMode);
 renderAll();
+checkBackupReminder();
