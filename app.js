@@ -383,7 +383,7 @@ function renderOpeningBalanceRow() {
 
   const label = document.createElement('span');
   label.className = 'itemRow__name itemRow__name--locked';
-  label.textContent = isFirst ? 'Saldo inicial (ponto de partida)' : 'Saldo inicial (do mês anterior)';
+  label.textContent = isFirst ? 'Saldo inicial (ponto de partida)' : 'Sobra do mês anterior';
   row.appendChild(label);
 
   if (isFirst) {
@@ -647,7 +647,7 @@ function renderTableGroupRows(groupKey, tbody) {
     obRow.className = 'opening-balance-row';
     const obTh = document.createElement('th');
     obTh.className = 'cell cell--label';
-    obTh.textContent = 'Saldo inicial 🔒';
+    obTh.textContent = 'Sobra do mês anterior 🔒';
     obTh.title = 'Automático — calculado a partir do saldo do mês anterior (exceto o primeiro mês)';
     obRow.appendChild(obTh);
     state.months.forEach((m, i) => {
@@ -1140,11 +1140,9 @@ document.getElementById('fileImport').addEventListener('change', (e) => {
 });
 
 setViewMode(viewMode);
-renderAll();
-checkBackupReminder();
-
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('service-worker.js').catch(() => {});
-  });
+try {
+  renderAll();
+  checkBackupReminder();
+} catch (err) {
+  console.error('Erro ao iniciar o app:', err);
 }

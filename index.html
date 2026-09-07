@@ -20,7 +20,7 @@
 
   <header class="topbar">
     <div class="topbar__brand">
-      <img src="icons/icon-192.png" alt="" class="topbar__logo" width="38" height="38">
+      <img src="icons/icon-192.png" alt="" class="topbar__logo" width="38" height="38" onerror="this.style.display='none'">
       <div>
         <span class="eyebrow">Livro-Caixa</span>
         <h1>Controle financeiro</h1>
@@ -163,6 +163,18 @@
 
 </div>
 
+<script>
+  // Registro do service worker vive aqui, separado do app.js de propósito:
+  // se algo no app.js der erro, isso não pode ser afetado, senão o app
+  // nunca fica instalável.
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('service-worker.js')
+        .then(() => console.log('Service worker registrado com sucesso.'))
+        .catch((err) => console.error('Falha ao registrar service worker:', err));
+    });
+  }
+</script>
 <script src="app.js"></script>
 </body>
 </html>

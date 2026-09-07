@@ -28,13 +28,23 @@ Não precisa de instalação, servidor ou banco de dados: é um site estático (
 ## Como publicar no GitHub (grátis, com link próprio)
 
 1. Crie um repositório novo no GitHub (pode ser público ou privado).
-2. Envie estes arquivos para a raiz do repositório: `index.html`, `style.css`, `app.js`, `manifest.json`, `service-worker.js`, `favicon.ico`, este `README.md`, e a **pasta inteira `icons/`** (com os 5 arquivos dentro dela).
+2. Envie estes arquivos para a raiz do repositório: `index.html`, `style.css`, `app.js`, `manifest.json`, `service-worker.js`, `favicon.ico`, `.nojekyll`, este `README.md`, e a **pasta inteira `icons/`** (com os 5 arquivos dentro dela).
    - Pelo site do GitHub: abra o repositório → **Add file → Upload files** → arraste os arquivos (e a pasta `icons`) → **Commit changes**.
+   - O `.nojekyll` é um arquivo vazio (sem conteúdo) — é normal ele aparecer "em branco", isso é intencional. Ele existe só pra avisar o GitHub Pages pra não tentar processar os arquivos de um jeito que pode confundir o service worker.
 3. Vá em **Settings → Pages**.
 4. Em **Source**, selecione a branch `main` e a pasta `/ (root)` → **Save**.
 5. Aguarde 1-2 minutos. O GitHub mostrará o link do site (algo como `https://seu-usuario.github.io/nome-do-repositorio/`).
 
 Pronto — esse link abre o app em qualquer navegador.
+
+### Se o Chrome só oferecer "criar atalho" (e não "Instalar app")
+
+Isso quer dizer que o manifest/ícones estão OK, mas o service worker não ativou. Pra checar o que está faltando, abra estes três links (trocando pelo seu usuário/repositório) — cada um deve abrir um arquivo, não dar erro 404:
+- `https://seu-usuario.github.io/nome-do-repositorio/manifest.json`
+- `https://seu-usuario.github.io/nome-do-repositorio/service-worker.js`
+- `https://seu-usuario.github.io/nome-do-repositorio/icons/icon-192.png`
+
+Se os três abrirem normalmente, feche a aba do navegador e abra o link de novo do zero (não só atualizar a página) — o Chrome às vezes demora uma visita a mais pra oferecer "Instalar app" de verdade.
 
 ## Como instalar como app (com o ícone R$)
 
