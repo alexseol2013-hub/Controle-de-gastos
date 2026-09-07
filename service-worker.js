@@ -10,8 +10,18 @@ const CORE_ASSETS = [
 ];
 
 self.addEventListener('install', (event) => {
+  // cache.addAll falha por completo se UM arquivo da lista der erro —
+  // por exemplo, se os ícones ainda não tiverem sido enviados pro
+  // repositório. Usando add() um por um com catch, os que existem
+  // ficam em cache e o service worker instala mesmo assim.
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(CORE_ASSETS))
+    caches.open(CACHE_NAME).then((cache) =>
+      Promise.all(
+        CORE_ASSETS.map((asset) =>
+          cache.add(asset).catch((err) => console.warn('Não consegui cachear', asset, err))
+        )
+      )
+    )
   );
   self.skipWaiting();
 });
