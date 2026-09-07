@@ -271,6 +271,30 @@ function renderHero() {
   cumEl.style.color = gerado >= 0 ? '#B7E0C4' : '#F0B3A6';
 
   renderHeroDelta(idx, saldo);
+  renderPaidStatus(m.id);
+}
+
+function paidTotals(monthId) {
+  let paid = 0;
+  let pending = 0;
+  ['fixed', 'variable'].forEach(groupKey => {
+    state.groups[groupKey].forEach(row => {
+      const v = num(row.values[monthId]);
+      if (v === 0) return;
+      if (row.paid && row.paid[monthId]) paid += v;
+      else pending += v;
+    });
+  });
+  return { paid, pending };
+}
+
+function renderPaidStatus(monthId) {
+  const { paid, pending } = paidTotals(monthId);
+  const total = paid + pending;
+  const pct = total > 0 ? Math.round((paid / total) * 100) : 0;
+  document.getElementById('heroPaidFill').style.width = pct + '%';
+  document.getElementById('heroPaidValue').textContent = brl.format(paid);
+  document.getElementById('heroPendingValue').textContent = brl.format(pending);
 }
 
 function renderHeroDelta(idx, saldo) {
@@ -486,6 +510,7 @@ function renderGroups() {
           row.paid[activeMonthId] = !row.paid[activeMonthId];
           saveState();
           renderGroups();
+          renderPaidStatus(activeMonthId);
         });
         itemRow.appendChild(paidBtn);
       }

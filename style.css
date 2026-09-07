@@ -110,6 +110,7 @@ body{
   flex-direction: column;
   gap: 8px;
 }
+.backupReminder[hidden]{ display: none; }
 .backupReminder span{
   font-family: var(--sans);
   font-size: 12.5px;
@@ -224,6 +225,30 @@ body{
 }
 .hero__chip span{ font-size: 10.5px; color: rgba(245,240,225,.55); }
 .hero__chip strong{ font-family: var(--mono); font-size: 13px; font-weight: 600; }
+
+.hero__paidTrack{
+  margin-top: 14px;
+  height: 5px;
+  border-radius: 3px;
+  background: rgba(245,240,225,.12);
+  overflow: hidden;
+}
+.hero__paidFill{
+  height: 100%;
+  background: #9FCBAE;
+  border-radius: 3px;
+  transition: width .2s ease;
+}
+.hero__paidStatus{
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  font-family: var(--sans);
+  font-size: 11px;
+}
+.hero__paidStatus--paid{ color: #9FCBAE; }
+.hero__paidStatus--pending{ color: rgba(245,240,225,.55); }
+.hero__paidStatus strong{ font-family: var(--mono); font-weight: 600; }
 
 /* dropdown list of months, anchored under hero */
 .monthMenu{
