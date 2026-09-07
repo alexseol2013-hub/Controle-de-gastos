@@ -52,6 +52,16 @@ body{
   color: var(--gold);
   margin-bottom: 2px;
 }
+.topbar__brand{
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.topbar__logo{
+  border-radius: 22%;
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(0,0,0,.18);
+}
 .topbar__brand h1{
   font-family: var(--serif);
   font-weight: 500;

@@ -4,6 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Livro-Caixa — Controle Financeiro</title>
+<meta name="theme-color" content="#17302A">
+<meta name="description" content="Controle financeiro pessoal com saldo automático, categorias e gráficos.">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
@@ -14,8 +20,11 @@
 
   <header class="topbar">
     <div class="topbar__brand">
-      <span class="eyebrow">Livro-Caixa</span>
-      <h1>Controle financeiro</h1>
+      <img src="icons/icon-192.png" alt="" class="topbar__logo" width="38" height="38">
+      <div>
+        <span class="eyebrow">Livro-Caixa</span>
+        <h1>Controle financeiro</h1>
+      </div>
     </div>
     <div class="topbar__actions">
       <button class="icon-btn" id="btnExport" title="Exportar backup">↓</button>

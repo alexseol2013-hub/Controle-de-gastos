@@ -1,6 +1,6 @@
 # Livro-Caixa — Controle Financeiro
 
-App para controlar rendimentos, despesas fixas e variáveis mês a mês, com saldo automático (positivo/negativo), categorias, gráficos e resumo geral. Já vem com os dados da sua planilha importados.
+App para controlar rendimentos, despesas fixas e variáveis mês a mês, com saldo automático (positivo/negativo), categorias, gráficos e resumo geral. Já vem com os dados da sua planilha importados, e agora é instalável como um app (com ícone próprio).
 
 Não precisa de instalação, servidor ou banco de dados: é um site estático (HTML/CSS/JS puro) que roda direto no navegador, sem depender de nenhuma biblioteca externa — os gráficos são desenhados pelo próprio app, então funcionam mesmo com bloqueador de anúncios ou economia de dados ligados. Os dados ficam salvos no `localStorage` do próprio navegador do seu computador/celular.
 
@@ -28,16 +28,27 @@ Não precisa de instalação, servidor ou banco de dados: é um site estático (
 ## Como publicar no GitHub (grátis, com link próprio)
 
 1. Crie um repositório novo no GitHub (pode ser público ou privado).
-2. Envie estes três arquivos (`index.html`, `style.css`, `app.js`) e este `README.md` para a raiz do repositório.
-   - Pelo site do GitHub: abra o repositório → **Add file → Upload files** → arraste os arquivos → **Commit changes**.
+2. Envie estes arquivos para a raiz do repositório: `index.html`, `style.css`, `app.js`, `manifest.json`, `service-worker.js`, `favicon.ico`, este `README.md`, e a **pasta inteira `icons/`** (com os 5 arquivos dentro dela).
+   - Pelo site do GitHub: abra o repositório → **Add file → Upload files** → arraste os arquivos (e a pasta `icons`) → **Commit changes**.
 3. Vá em **Settings → Pages**.
 4. Em **Source**, selecione a branch `main` e a pasta `/ (root)` → **Save**.
 5. Aguarde 1-2 minutos. O GitHub mostrará o link do site (algo como `https://seu-usuario.github.io/nome-do-repositorio/`).
 
-Pronto — esse link abre o app em qualquer navegador, e você pode salvá-lo na tela inicial do celular como um atalho.
+Pronto — esse link abre o app em qualquer navegador.
+
+## Como instalar como app (com o ícone R$)
+
+**Android (Chrome):** abra o link → toque nos **⋮** (três pontinhos, canto superior direito) → **Instalar app** (ou **Adicionar à tela inicial**). Se essa opção não aparecer de primeira, dê um trocado de página (navegue um pouco) e tente de novo — o Chrome só oferece instalar depois de confirmar que o site tem manifest + ícone certinhos, o que já está configurado aqui.
+
+**iPhone (Safari):** abra o link → toque no ícone de compartilhar (o quadrado com uma seta pra cima) → **Adicionar à Tela de Início**.
+
+**Computador (Chrome/Edge):** abra o link → clique no ícone de instalar que aparece do lado direito da barra de endereço (ou **⋮ → Instalar Livro-Caixa**).
+
+Depois de instalado, o app abre em janela própria, sem a barra do navegador, com o ícone R$ dourado na tela inicial/dock.
 
 ## Limitações para saber de antemão
 
 - Os dados não são compartilhados entre dispositivos/navegadores automaticamente (não há login nem servidor). Use o backup para levar os dados de um lugar para outro. Um lembrete automático aparece no app a cada poucos dias sugerindo exportar — mas não existe sincronização em nuvem de verdade sem adicionar um serviço externo (isso mudaria o app de "site estático" pra algo com backend, contas de usuário etc.).
 - Se limpar os dados de navegação do navegador ("limpar cache e cookies"), os dados salvos aqui também somem — exporte um backup antes.
 - O status de pago/pendente e a categoria de cada item ficam salvos, mas só existem na Visão "Este mês" — a tabela (Visão geral) não mostra esses dois por enquanto.
+- Agora que o app tem um service worker (o que permite funcionar offline e ser instalável), ele guarda uma cópia dos arquivos em cache. Normalmente as atualizações chegam sozinhas, mas se um dia você atualizar os arquivos no GitHub e o app continuar mostrando a versão antiga, feche e abra o app de novo (ou dê um "puxão" pra atualizar/refresh) que ele resolve.
