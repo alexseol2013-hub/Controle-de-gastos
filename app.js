@@ -79,7 +79,7 @@ function uid(prefix) {
 
 function seedData() {
   const monthLabels = ['Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro', 'Janeiro', 'Fevereiro', 'Fevereiro (2)'];
-  const months = monthLabels.map((label, i) => ({ id: 'm' + (i + 1), label }));
+  const months = monthLabels.map((label, i) => ({ id: 'm' + (i + 1), label, notes: '' }));
 
   function row(name, vals, category) {
     const values = {};
@@ -146,7 +146,10 @@ function migrateState(s) {
   if (!s.months) s.months = [];
   const validMonthIds = new Set(s.months.map(m => m.id));
 
-  s.months.forEach(m => { m.label = (m.label || '').trim() || m.label; });
+  s.months.forEach(m => {
+    m.label = (m.label || '').trim() || m.label;
+    if (typeof m.notes !== 'string') m.notes = '';
+  });
 
   if (s.initialBalance === undefined) {
     const sobraRow = (s.groups.income || []).find(r => r.name.toLowerCase().includes('sobra'));
@@ -288,6 +291,21 @@ function paidTotals(monthId) {
   return { paid, pending };
 }
 
+function renderNotes() {
+  const textarea = document.getElementById('notesTextarea');
+  if (!textarea) return;
+  const m = state.months[monthIndex(activeMonthId)];
+  if (!m) return;
+  textarea.value = m.notes || '';
+}
+
+document.getElementById('notesTextarea').addEventListener('change', () => {
+  const m = state.months[monthIndex(activeMonthId)];
+  if (!m) return;
+  m.notes = document.getElementById('notesTextarea').value;
+  saveState();
+});
+
 function renderPaidStatus(monthId) {
   const { paid, pending } = paidTotals(monthId);
   const total = paid + pending;
@@ -338,7 +356,7 @@ function toggleMonthMenu() {
       del.addEventListener('click', (e) => { e.stopPropagation(); removeMonth(m.id); });
       item.appendChild(del);
     }
-    item.addEventListener('click', () => { activeMonthId = m.id; closeMonthMenu(); renderHero(); renderGroups(); renderCategoryBreakdown(); });
+    item.addEventListener('click', () => { activeMonthId = m.id; closeMonthMenu(); renderHero(); renderGroups(); renderCategoryBreakdown(); renderNotes(); });
     menu.appendChild(item);
   });
   menu.hidden = false;
@@ -364,11 +382,11 @@ document.addEventListener('click', (e) => {
 });
 document.getElementById('prevMonth').addEventListener('click', () => {
   const idx = monthIndex(activeMonthId);
-  if (idx > 0) { activeMonthId = state.months[idx - 1].id; renderHero(); renderGroups(); renderCategoryBreakdown(); }
+  if (idx > 0) { activeMonthId = state.months[idx - 1].id; renderHero(); renderGroups(); renderCategoryBreakdown(); renderNotes(); }
 });
 document.getElementById('nextMonth').addEventListener('click', () => {
   const idx = monthIndex(activeMonthId);
-  if (idx < state.months.length - 1) { activeMonthId = state.months[idx + 1].id; renderHero(); renderGroups(); renderCategoryBreakdown(); }
+  if (idx < state.months.length - 1) { activeMonthId = state.months[idx + 1].id; renderHero(); renderGroups(); renderCategoryBreakdown(); renderNotes(); }
 });
 
 function renderOpeningBalanceRow() {
@@ -1014,7 +1032,7 @@ function removeRow(groupKey, rowId) {
 
 function addMonth() {
   const prev = state.months[state.months.length - 1];
-  const newMonth = { id: uid('m'), label: prev ? nextMonthLabel(prev.label) : 'Novo mês' };
+  const newMonth = { id: uid('m'), label: prev ? nextMonthLabel(prev.label) : 'Novo mês', notes: '' };
   state.months.push(newMonth);
   GROUP_ORDER.forEach(groupKey => {
     state.groups[groupKey].forEach(row => {
@@ -1030,7 +1048,7 @@ function addMonth() {
 function duplicateMonth() {
   const source = state.months.find(m => m.id === activeMonthId);
   if (!source) return;
-  const newMonth = { id: uid('m'), label: nextMonthLabel(source.label) };
+  const newMonth = { id: uid('m'), label: nextMonthLabel(source.label), notes: '' };
   state.months.push(newMonth);
   GROUP_ORDER.forEach(groupKey => {
     state.groups[groupKey].forEach(row => {
@@ -1129,6 +1147,7 @@ function renderAll() {
   renderGroups();
   renderTable();
   renderCharts();
+  renderNotes();
 }
 
 document.getElementById('btnAddMonth').addEventListener('click', addMonth);
